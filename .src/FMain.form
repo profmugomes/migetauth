@@ -23,10 +23,6 @@
       Text = ("Excluir Conta")
     }
   }
-  { ListBox1 ListBox
-    MoveScaled(1,1,33,44)
-    PopupMenu = "MenuContexto"
-  }
   { lcdCodigo LCDLabel
     MoveScaled(56,11,28,9)
   }
@@ -44,5 +40,9 @@
   }
   { Timer2 #Timer
     #MoveScaled(89,40)
+  }
+  { lstAccounts ColumnView
+    MoveScaled(1,1,33,44)
+    PopupMenu = "MenuContexto"
   }
 }

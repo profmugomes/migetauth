@@ -1,28 +1,158 @@
 ' Gambas class file
 
+Public dbPath As String = User.Home & "/.config/migetauth/"
+Public dbName As String = "auth.db"
+
+Private $conecta As Connection
 Private sTimer As Integer = 30
 
-Public Sub Form_Open()
+Private sCode As String
 
+Private Sub createDB()
+  If Exist(dbPath) = False Then 
+    Shell "mkdir -p \"" & dbPath & "\"" Wait 
+    $conecta = New Connection
+    $conecta.Type = "sqlite3"
+    $conecta.Host = dbPath
+    $conecta.Name = ""
+    $conecta.Open()
+    $conecta.Databases.Add(dbName)
+    $conecta.Close()
+  Endif
+  
+  $conecta = New Connection
+  $conecta.Type = "sqlite3"
+  $conecta.Host = dbPath
+  $conecta.Name = dbName
+  $conecta.Open()
+  
+  Dim sql As String = "CREATE TABLE IF NOT EXISTS accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, secret TEXT NOT NULL);"
+    
+  sql &= "CREATE TABLE IF NOT EXISTS secretkey (id INTEGER PRIMARY KEY AUTOINCREMENT, secret TEXT NOT NULL)"
+  
+  $conecta.Exec(sql)
+  
+  $conecta.Close()
+End
+
+Private Sub dbLoad()
+  Try $conecta.Close()
+  $conecta = New Connection
+  $conecta.Type = "sqlite3"
+  $conecta.Host = FMain.dbPath
+  $conecta.Name = FMain.dbName
+  $conecta.Open()
+  
+  Dim rs As Result = $conecta.Exec("SELECT id,name FROM accounts ORDER BY id")
+  
+  While (rs.Available)
+    lstAccounts.Add(rs!id, rs!id)
+    lstAccounts[rs!id][1] = rs!name
+    
+    rs.MoveNext()
+  Wend
+  
+  $conecta.Close()
+End
+
+Private Function getAccountCode(id As Integer) As String
+  Dim txt As String
+  
+  Try $conecta.Close()
+  $conecta = New Connection
+  $conecta.Type = "sqlite3"
+  $conecta.Host = FMain.dbPath
+  $conecta.Name = FMain.dbName
+  $conecta.Open()
+  
+  Dim rs As Result = $conecta.Exec("SELECT id,secret FROM accounts WHERE id=&1", id)
+  
+  While (rs.Available)
+    txt = rs!secret
+    
+    rs.MoveNext()
+  Wend
+  
+  $conecta.Close()
+  
+  Return txt
+End
+
+Public Sub Form_Open()
+  lstAccounts.Columns.Count = 2
+  lstAccounts.Columns[0].Text = "ID"
+  lstAccounts.Columns[0].Width = 70
+  lstAccounts.Columns[1].Text = "Nome"
+  lstAccounts.Columns[1].Width = 200
+  
+  createDB()
+  dbLoad()
+  
   Timer1.Start()
   Timer2.Start()
-
 End
 
 Public Sub btnCopiarCodigo_Click()
-
   Clipboard.Copy(lcdCodigo.Text)
-
 End
 
 Public Sub Timer1_Timer()
-
-  sTimer = 30
-
+  sTimer = 31
+  
+  getCode(lstAccounts[lstAccounts.Key][0])
 End
 
 Public Sub Timer2_Timer()
   sTimer = sTimer - 1
   lblSeconds.Text = sTimer & "s"
+End
 
+Private Sub getCode(id As Integer)
+  
+  Dim sSecret As String = decrypt(getAccountCode(id))
+  Dim sCode As String = modOTP.TOTP(sSecret)
+    
+  If modOTP.VerifyTOTP(sSecret, sCode) Then 
+    lcdCodigo.Text = sCode
+  Endif
+  
+End
+
+
+Public Sub lstAccounts_Click()
+  getCode(lstAccounts[lstAccounts.Key][0])
+End
+
+Public Sub Form_Close()
+  Timer1.Stop()
+  Timer2.Stop()
+  
+  Quit
+End
+
+Public Function getSecret() As String
+  Dim txt As String 
+  
+  Try $conecta.Close()
+  $conecta = New Connection
+  $conecta.Type = "sqlite3"
+  $conecta.Host = dbPath
+  $conecta.Name = dbName
+  $conecta.Open()
+  
+  Dim rs As Result = $conecta.Exec("SELECT secret FROM secretkey")
+  
+  While (rs.Available)
+    txt = rs!secret
+    rs.MoveNext()
+  Wend
+  
+  $conecta.Close()
+  
+  Return txt
+End
+
+Public Function decrypt(value As String) As String
+  Dim sSecret As String = getSecret()
+  Return modEncrypt.getFernet(value, sSecret)
 End

@@ -1,0 +1,99 @@
+' Gambas module file
+
+Public Function setFernet(PlainText As String, Key As String) As String
+  Dim rawKey As String
+  Dim signingKey As String
+  Dim encryptionKey As String
+  Dim iv As String
+  Dim cipherText As String
+  Dim data As String
+  Dim timestamp As String
+  Dim mac As String
+  Dim t As Long
+
+  rawKey = DecodeBase64URL(Key)
+  If Len(rawKey) <> 32 Then Error.Raise("Chave Fernet inválida.")
+
+  signingKey = Left$(rawKey, 16)
+  encryptionKey = Mid$(rawKey, 17, 16)
+
+  iv = OpenSSL.RandomBytes(16)
+  cipherText = Cipher["AES-128-CBC"].Encrypt(PlainText, encryptionKey, iv).Cipher
+
+  t = DateDiff(Date(1970, 1, 1), Now, gb.Second)
+  timestamp = Chr$(0) & Chr$(0) & Chr$(0) & Chr$(0)
+  timestamp &= Chr$((t Shr 24) And 255)
+  timestamp &= Chr$((t Shr 16) And 255)
+  timestamp &= Chr$((t Shr 8) And 255)
+  timestamp &= Chr$(t And 255)
+
+  data = Chr$(128) & timestamp & iv & cipherText
+  mac = HMac(signingKey, data, "sha256")
+
+  Return EncodeBase64URL(data & mac)
+End
+
+Public Function getFernet(Token As String, Key As String) As String
+  Dim rawKey As String
+  Dim rawToken As String
+  Dim signingKey As String
+  Dim encryptionKey As String
+  Dim data As String
+  Dim iv As String
+  Dim cipherText As String
+  Dim storedMac As String
+  Dim calculatedMac As String
+  Dim cipher1 As CipherText
+
+  rawKey = DecodeBase64URL(Key)
+  If Len(rawKey) <> 32 Then Error.Raise("Chave Fernet inválida.")
+
+  rawToken = DecodeBase64URL(Token)
+  If Len(rawToken) < 57 Then Error.Raise("Token Fernet inválido.")
+  If Asc(Left$(rawToken, 1)) <> 128 Then Error.Raise("Versão Fernet inválida.")
+
+  signingKey = Left$(rawKey, 16)
+  encryptionKey = Mid$(rawKey, 17, 16)
+
+  data = Left$(rawToken, Len(rawToken) - 32)
+  storedMac = Right$(rawToken, 32)
+  calculatedMac = HMac(signingKey, data, "sha256")
+
+  If storedMac <> calculatedMac Then
+    Error.Raise("Assinatura Fernet inválida.")
+  Endif
+
+  iv = Mid$(rawToken, 10, 16)
+  cipherText = Mid$(rawToken, 26, Len(rawToken) - 57)
+
+  cipher1 = New CipherText(cipherText, encryptionKey, iv)
+
+  Return Cipher["AES-128-CBC"].Decrypt(cipher1)
+End
+
+Private Function DecodeBase64URL(Value As String) As String
+  Dim s As String
+
+  s = Replace(Value, "-", "+")
+  s = Replace(s, "_", "/")
+
+  While Len(s) Mod 4
+    s &= "="
+  Wend
+
+  Return FromBase64(s)
+End
+
+Private Function EncodeBase64URL(Value As String) As String
+  Dim s As String
+
+  s = Base64$(Value)
+  s = Replace(s, "+", "-")
+  s = Replace(s, "/", "_")
+
+  While Right$(s, 1) = "="
+    s = Left$(s, Len(s) - 1)
+  Wend
+
+  Return s
+End

@@ -1,13 +1,13 @@
 ' Gambas module file
 
 ' Gera um segredo Base32 aleatório
-Public Function GenerateSecret() As String
-  Dim sOutput As String
+' Public Function GenerateSecret() As String
+'  Dim sOutput As String
 
-  Shell "openssl rand -base64 20 | tr -dc 'A-Z2-7' | head -c 32" To sOutput
+'  Shell "openssl rand -base64 20 | tr -dc 'A-Z2-7' | head -c 32" To sOutput
 
-  Return Trim(sOutput)
-End
+'  Return Trim(sOutput)
+' End
 
 ' Gera o código TOTP atual
 Public Function TOTP(sSecret As String, Optional iDigits As Integer = 6, Optional iPeriod As Integer = 30) As String
@@ -26,41 +26,64 @@ Public Function TOTP(sSecret As String, Optional iDigits As Integer = 6, Optiona
   Return Trim(sOutput)
 End
 
-' Valida o código, aceitando uma janela de tempo
 Public Function VerifyTOTP(sSecret As String, sCode As String, Optional iWindow As Integer = 1, Optional iDigits As Integer = 6, Optional iPeriod As Integer = 30) As Boolean
   Dim i As Integer
   Dim sOutput As String
   Dim sCommand As String
+  Dim iBaseTimestamp As Long
   Dim iTimestamp As Long
   
-  'If Not IsValidSecret(sSecret) Then Message.Error("Segredo Base32 inválido")
   If Not IsDigit(sCode) Then Return False
   If Len(sCode) <> iDigits Then Return False
   If iWindow < 0 Or iWindow > 10 Then Return False
+  If Not sSecret Then Return False
+
+  iBaseTimestamp = DateDiff(CDate("1/1/1970"), Now(), gb.Second)
 
   For i = -iWindow To iWindow
-    iTimestamp = DateDiff(Now(), Date(1970, 1, 1), gb.Second)
-    iTimestamp += i * iPeriod
+    iTimestamp = iBaseTimestamp + (i * iPeriod)
     
-    sCommand = "oathtool --totp --base32 --digits=" & Str(iDigits) & " --now=" & Str(iTimestamp) & " '" & sSecret & "'"
+    ' Adicionado o '@' antes do timestamp, que indica formato Unix Epoch para o oathtool
+    sCommand = "oathtool --totp --base32 --digits=" & Str(iDigits) & " --time-step-size=" & Str(iPeriod) & "s --now=@" & Str(iTimestamp) & " '" & sSecret & "' 2>&1"
 
     Shell sCommand To sOutput
-
-    If Trim(sOutput) = sCode Then Return True
+    sOutput = Trim(sOutput)
+    
+    If sOutput = sCode Then Return True
   Next
 
   Return False
 End
 
-Public Function IsValidSecret(sSecret As String) As Boolean
+Private Function IsValidSecret(sSecret As String) As Boolean
   Dim i As Integer
   Dim sChar As String
+  Dim sClean As String
+  
+  If Not sSecret Then 
+    Print "Erro IsValidSecret: Segredo vazio ou nulo."
+    Return False
+  End If
+  
+  ' Remove espaços e hífens internos/externos comuns em chaves formatadas
+  sClean = Replace(sSecret, " ", "")
+  sClean = Replace(sClean, "-", "")
+  sClean = Trim(sClean)
+  
+  ' Verificação de tamanho (alguns usam 16, mas se o seu for menor, ajuste aqui)
+  If Len(sClean) < 8 Then 
+    Print "Erro IsValidSecret: Tamanho muito curto -> " & Len(sClean)
+    Return False
+  End If
 
-  If Len(sSecret) < 16 Then Return False
-
-  For i = 1 To Len(sSecret)
-    sChar = UCase(Mid(sSecret, i, 1))
-    If InStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567", sChar) = 0 Then Return False
+  For i = 1 To Len(sClean)
+    sChar = UCase(Mid(sClean, i, 1))
+    
+    ' Valida caracteres permitidos em Base32 + Padding (=)
+    If InStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=", sChar) = 0 Then 
+      Print "Erro IsValidSecret: Caractere inválido encontrado: [" & sChar & "]"
+      Return False
+    End If
   Next
 
   Return True

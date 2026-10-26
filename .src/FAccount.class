@@ -1,2 +1,20 @@
 ' Gambas class file
 
+Private $conecta As Connection
+Public Sub btnAddAccount_Click()
+
+
+
+End
+
+Public Sub Form_Open()
+
+  
+
+End
+
+
+Public Function encrypt(value As String) As String
+  Dim sSecret As String = FMain.getSecret()
+  Return modEncrypt.setFernet(value, sSecret)
+End
