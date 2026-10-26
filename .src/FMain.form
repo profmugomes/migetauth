@@ -1,0 +1,48 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,103,50)
+  Font = Font["12"]
+  Text = ("MiGetAuth")
+  Icon = Picture["migetauth.png"]
+  { Menu1 Menu
+    Text = ("Ferramentas")
+    { mnuAddAccount Menu
+      Text = ("Adicionar Conta")
+    }
+  }
+  { MenuContexto Menu
+    Text = ("Menu")
+    Visible = False
+    { mnuEditAccount Menu
+      Text = ("Editar Conta")
+    }
+    { Menu2 Menu
+    }
+    { mnuRemoveAccount Menu
+      Text = ("Excluir Conta")
+    }
+  }
+  { ListBox1 ListBox
+    MoveScaled(1,1,33,44)
+    PopupMenu = "MenuContexto"
+  }
+  { lcdCodigo LCDLabel
+    MoveScaled(56,11,28,9)
+  }
+  { btnCopiarCodigo Button
+    MoveScaled(60,31,19,4)
+    Text = ("Copiar Código")
+  }
+  { lblSeconds Label
+    MoveScaled(62,21,15,4)
+    Alignment = Align.Center
+  }
+  { Timer1 #Timer
+    #MoveScaled(96,40)
+    Delay = 30000
+  }
+  { Timer2 #Timer
+    #MoveScaled(89,40)
+  }
+}

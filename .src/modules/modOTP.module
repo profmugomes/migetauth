@@ -1,0 +1,67 @@
+' Gambas module file
+
+' Gera um segredo Base32 aleatório
+Public Function GenerateSecret() As String
+  Dim sOutput As String
+
+  Shell "openssl rand -base64 20 | tr -dc 'A-Z2-7' | head -c 32" To sOutput
+
+  Return Trim(sOutput)
+End
+
+' Gera o código TOTP atual
+Public Function TOTP(sSecret As String, Optional iDigits As Integer = 6, Optional iPeriod As Integer = 30) As String
+  Dim sOutput As String
+  Dim sCommand As String
+  
+  If Not IsValidSecret(sSecret) Then Message.Error("Segredo Base32 inválido")
+  If iDigits < 6 Or iDigits > 8 Then Message.Error("Quantidade de dígitos inválida")
+  If iPeriod < 1 Then Message.Error("Período inválido")
+  If Not sSecret Then Message.Error("Segredo vazio")
+
+  sCommand = "oathtool --totp --base32 --digits=" & Str(iDigits) & " --time-step-size=" & Str(iPeriod) & "s '" & sSecret & "'"
+
+  Shell sCommand To sOutput
+
+  Return Trim(sOutput)
+End
+
+' Valida o código, aceitando uma janela de tempo
+Public Function VerifyTOTP(sSecret As String, sCode As String, Optional iWindow As Integer = 1, Optional iDigits As Integer = 6, Optional iPeriod As Integer = 30) As Boolean
+  Dim i As Integer
+  Dim sOutput As String
+  Dim sCommand As String
+  Dim iTimestamp As Long
+  
+  'If Not IsValidSecret(sSecret) Then Message.Error("Segredo Base32 inválido")
+  If Not IsDigit(sCode) Then Return False
+  If Len(sCode) <> iDigits Then Return False
+  If iWindow < 0 Or iWindow > 10 Then Return False
+
+  For i = -iWindow To iWindow
+    iTimestamp = DateDiff(Now(), Date(1970, 1, 1), gb.Second)
+    iTimestamp += i * iPeriod
+    
+    sCommand = "oathtool --totp --base32 --digits=" & Str(iDigits) & " --now=" & Str(iTimestamp) & " '" & sSecret & "'"
+
+    Shell sCommand To sOutput
+
+    If Trim(sOutput) = sCode Then Return True
+  Next
+
+  Return False
+End
+
+Public Function IsValidSecret(sSecret As String) As Boolean
+  Dim i As Integer
+  Dim sChar As String
+
+  If Len(sSecret) < 16 Then Return False
+
+  For i = 1 To Len(sSecret)
+    sChar = UCase(Mid(sSecret, i, 1))
+    If InStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567", sChar) = 0 Then Return False
+  Next
+
+  Return True
+End

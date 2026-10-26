@@ -1,0 +1,15 @@
+# Gambas Project File 3.0
+Title=MiGetAuth
+Startup=FMain
+Icon=migetauth.png
+Version=2.0.0
+Component=gb.image
+Component=gb.gtk3
+Component=gb.form
+Description="MiGetAuth é um software livre criado para gerar códigos de autenticação de dois fatores (2FA) de maneira segura e confiável."
+Authors="Murilo Gomes <profmugomes@gmail.com>"
+TabSize=2
+Language=pt_BR
+Vendor=profmugomes
+AppId=br.com.profmugomes.migetauth
+Packager=1

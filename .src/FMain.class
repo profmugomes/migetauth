@@ -1,0 +1,28 @@
+' Gambas class file
+
+Private sTimer As Integer = 30
+
+Public Sub Form_Open()
+
+  Timer1.Start()
+  Timer2.Start()
+
+End
+
+Public Sub btnCopiarCodigo_Click()
+
+  Clipboard.Copy(lcdCodigo.Text)
+
+End
+
+Public Sub Timer1_Timer()
+
+  sTimer = 30
+
+End
+
+Public Sub Timer2_Timer()
+  sTimer = sTimer - 1
+  lblSeconds.Text = sTimer & "s"
+
+End

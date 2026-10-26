@@ -24,17 +24,24 @@ O MiGetAuth tem como foco a simplicidade, transparência e liberdade.
 
 🧪 Comportamento determinístico e previsível, garantindo confiabilidade na geração dos códigos
 
-## 💙 Apoie
+## Information
 
-- GitHub: https://github.com/sponsors/bluiceoficial
+ - [Repository MiGetAuth](https://github.com/profmugomes/migetauth)
+
+## System Requirement
+
+### Linux
+
+- Ubuntu 26.04 or higher
+- oathtool, openssl, scrot, zbar-tools
 
 ## 👤 Autor
 
-**Murilo Gomes Julio**
+**Murilo Gomes**
 
-🔗 [https://www.bluice.com.br](https://www.bluice.com.br)
+🔗 [https://www.profmugomes.com.br](https://www.profmugomes.com.br)
 
-📺 [https://youtube.com/@bluiceoficial](https://youtube.com/@bluiceoficial)
+📺 [https://youtube.com/@profmugomes](https://youtube.com/@profmugomes)
 
 ---
 
@@ -42,7 +49,7 @@ O MiGetAuth tem como foco a simplicidade, transparência e liberdade.
 
 The MiGetAuth is provided under:
 
-[SPDX-License-Identifier: GPL-2.0-only](https://github.com/bluiceoficial/migetauth/blob/main/LICENSE)
+[SPDX-License-Identifier: GPL-2.0-only](https://spdx.org/licenses/GPL-2.0-only.html)
 
 Beign under the terms of the GNU General Public License version 2 only.
 

@@ -1,0 +1,36 @@
+' Gambas module file
+
+Public Function LerQRCode() As String
+  Dim sImagem As String
+  Dim sURL As String
+  sImagem = "/tmp/gambas-qrcode.png"
+
+  If Exist(sImagem) Then Try Kill sImagem
+ 
+  Shell "scrot -s " & sImagem Wait
+  Shell "zbarimg -q --raw " & sImagem Wait To sURL
+  
+  If Exist(sImagem) Then Try Kill sImagem
+
+  Return GetSecret(Trim(sURL))
+End
+
+Public Function GetSecret(sURL As String) As String
+  Dim sParams As String
+  Dim sParam As String
+  Dim aParams As String[]
+  Dim aPair As String[]
+
+  sParams = Split(sURL, "?", "")[1]
+  aParams = Split(sParams, "&")
+
+  For Each sParam In aParams
+    aPair = Split(sParam, "=")
+
+    If aPair[0] = "secret" Then
+      Return aPair[1]
+    Endif
+  Next
+
+  Return ""
+End
