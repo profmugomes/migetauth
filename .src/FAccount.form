@@ -4,6 +4,7 @@
   MoveScaled(0,0,49,30)
   Font = Font["12"]
   Text = ("Gerenciar Conta")
+  Icon = Picture["migetauth.png"]
   Resizable = False
   { Label1 Label
     MoveScaled(1,2,45,3)
