@@ -5,7 +5,7 @@
 
 ' Site: https://www.profmugomes.com.br
 
-Public Function setFernet(PlainText As String, Key As String) As String
+Public Function setFernet(PlainText As String, sKey As String) As String
   Dim rawKey As String
   Dim signingKey As String
   Dim encryptionKey As String
@@ -15,8 +15,8 @@ Public Function setFernet(PlainText As String, Key As String) As String
   Dim timestamp As String
   Dim mac As String
   Dim t As Long
-
-  rawKey = DecodeBase64URL(Key)
+  
+  rawKey = DecodeBase64URL(sKey)
   If Len(rawKey) <> 32 Then Error.Raise("Chave Fernet inválida.")
 
   signingKey = Left$(rawKey, 16)
@@ -38,7 +38,7 @@ Public Function setFernet(PlainText As String, Key As String) As String
   Return EncodeBase64URL(data & mac)
 End
 
-Public Function getFernet(Token As String, Key As String) As String
+Public Function getFernet(Token As String, sKey As String) As String
   Dim rawKey As String
   Dim rawToken As String
   Dim signingKey As String
@@ -50,7 +50,7 @@ Public Function getFernet(Token As String, Key As String) As String
   Dim calculatedMac As String
   Dim cipher1 As CipherText
 
-  rawKey = DecodeBase64URL(Key)
+  rawKey = DecodeBase64URL(sKey)
   If Len(rawKey) <> 32 Then Error.Raise("Chave Fernet inválida.")
 
   rawToken = DecodeBase64URL(Token)
@@ -89,7 +89,7 @@ Private Function DecodeBase64URL(Value As String) As String
   Return FromBase64(s)
 End
 
-Private Function EncodeBase64URL(Value As String) As String
+Public Function EncodeBase64URL(Value As String) As String
   Dim s As String
 
   s = Base64$(Value)

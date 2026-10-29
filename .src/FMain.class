@@ -11,8 +11,6 @@ Public dbName As String = "auth.db"
 Private $conecta As Connection
 Private sTimer As Integer = 30
 
-Private sCode As String
-
 Private Sub createDB()
   If Exist(dbPath) = False Then 
     Shell "mkdir -p \"" & dbPath & "\"" Wait 
@@ -106,7 +104,7 @@ End
 Public Sub Timer1_Timer()
   sTimer = 31
   
-  getCode(lstAccounts[lstAccounts.Key][0])
+  If lstAccounts.Count > 0 Then getCode(lstAccounts[lstAccounts.Key][0])
 End
 
 Public Sub Timer2_Timer()
@@ -153,6 +151,12 @@ Public Function getSecret() As String
     txt = rs!secret
     rs.MoveNext()
   Wend
+  
+  If txt = "" Then 
+    txt = modEncrypt.EncodeBase64URL(OpenSSL.RandomBytes(32))
+    
+    $conecta.Exec("INSERT INTO secretkey (secret) VALUES (&1)", txt)
+  Endif
   
   $conecta.Close()
   

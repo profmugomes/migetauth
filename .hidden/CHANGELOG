@@ -1,0 +1,6 @@
+* Thu Oct 29 2026 Murilo Gomes <profmugomes@gmail.com> 2.0.5
+- Corrigido problema de geração de chave secreta.
+
+* Thu Oct 29 2026 Murilo Gomes <profmugomes@gmail.com> 2.0.3
+- Migrado para a linguagem de programação Gambas3
+
