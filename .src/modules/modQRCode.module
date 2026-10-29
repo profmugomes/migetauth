@@ -3,9 +3,7 @@
 Public Function LerQRCode() As String
   Dim sImagem As String
   Dim sURL As String
-  sImagem = "/tmp/gambas-qrcode.png"
-
-  If Exist(sImagem) Then Try Kill sImagem
+  sImagem = "/tmp/migetauth-qrcode.png"
  
   Shell "scrot -s " & sImagem Wait
   Shell "zbarimg -q --raw " & sImagem Wait To sURL
@@ -15,7 +13,7 @@ Public Function LerQRCode() As String
   Return GetSecret(Trim(sURL))
 End
 
-Public Function GetSecret(sURL As String) As String
+Private Function GetSecret(sURL As String) As String
   Dim sParams As String
   Dim sParam As String
   Dim aParams As String[]

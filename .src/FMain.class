@@ -35,7 +35,7 @@ Private Sub createDB()
   $conecta.Close()
 End
 
-Private Sub dbLoad()
+Public Sub dbLoad()
   Try $conecta.Close()
   $conecta = New Connection
   $conecta.Type = "sqlite3"
@@ -44,6 +44,8 @@ Private Sub dbLoad()
   $conecta.Open()
   
   Dim rs As Result = $conecta.Exec("SELECT id,name FROM accounts ORDER BY id")
+  
+  lstAccounts.Clear()
   
   While (rs.Available)
     lstAccounts.Add(rs!id, rs!id)
@@ -155,4 +157,36 @@ End
 Public Function decrypt(value As String) As String
   Dim sSecret As String = getSecret()
   Return modEncrypt.getFernet(value, sSecret)
+End
+
+Public Sub mnuAddAccount_Click()
+
+  FAccount.ShowDialog()
+
+End
+
+Public Sub mnuEditAccount_Click()
+
+  FAccount.sID = lstAccounts.Selection[0]
+  FAccount.ShowDialog()
+
+End
+
+Public Sub mnuRemoveAccount_Click()
+
+  Try $conecta.Close()
+  $conecta = New Connection
+  $conecta.Type = "sqlite3"
+  $conecta.Host = FMain.dbPath 
+  $conecta.Name = FMain.dbName
+  $conecta.Open()
+  
+  Dim sID As Integer = lstAccounts.Selection[0]
+  If sID > 0 Then
+    $conecta.Exec("DELETE FROM accounts WHERE id=&1", sID)
+    lstAccounts.Remove(sID)
+  Endif
+  
+  $conecta.Close()
+
 End
