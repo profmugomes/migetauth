@@ -195,3 +195,21 @@ Public Sub mnuRemoveAccount_Click()
   $conecta.Close()
 
 End
+
+Public Sub mnuCheckUpdate_Click()
+
+  Shell "xdg-open \"https://github.com/profmugomes/migetauth/releases\""
+
+End
+
+Public Sub mnuSupport_Click()
+
+  Shell "xdg-open \"https://github.com/sponsors/profmugomes\""
+
+End
+
+Public Sub mnuAbout_Click()
+
+  FAbout.ShowDialog()
+
+End

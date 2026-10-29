@@ -19,6 +19,22 @@
       Text = ("Excluir Conta")
     }
   }
+  { Menu2 Menu
+    Text = ("Sobre")
+    { mnuCheckUpdate Menu
+      Text = ("Verificar Atualização")
+    }
+    { Menu3 Menu
+    }
+    { mnuSupport Menu
+      Text = ("Apoie MiGetAuth")
+    }
+    { Menu5 Menu
+    }
+    { mnuAbout Menu
+      Text = ("Sobre MiGetAuth")
+    }
+  }
   { lcdCodigo LCDLabel
     MoveScaled(56,11,28,9)
   }
