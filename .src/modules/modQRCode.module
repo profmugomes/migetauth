@@ -19,21 +19,22 @@ Public Function LerQRCode() As String
 End
 
 Private Function GetSecret(sURL As String) As String
-  Dim sParams As String
-  Dim sParam As String
-  Dim aParams As String[]
-  Dim aPair As String[]
-
-  sParams = Split(sURL, "?", "")[1]
-  aParams = Split(sParams, "&")
-
-  For Each sParam In aParams
-    aPair = Split(sParam, "=")
-
-    If aPair[0] = "secret" Then
-      Return aPair[1]
-    Endif
-  Next
-
+  If sURL <> "" Then 
+    Dim sParams As String
+    Dim sParam As String
+    Dim aParams As String[]
+    Dim aPair As String[]
+  
+    sParams = Split(sURL, "?", "")[1]
+    aParams = Split(sParams, "&")
+  
+    For Each sParam In aParams
+      aPair = Split(sParam, "=")
+  
+      If aPair[0] = "secret" Then
+        Return aPair[1]
+      Endif
+    Next
+  Endif
   Return ""
 End

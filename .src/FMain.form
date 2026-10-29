@@ -10,14 +10,10 @@
     { mnuAddAccount Menu
       Text = ("Adicionar Conta")
     }
-  }
-  { MenuContexto Menu
-    Text = ("Menu")
-    Visible = False
     { mnuEditAccount Menu
       Text = ("Editar Conta")
     }
-    { Menu2 Menu
+    { Menu4 Menu
     }
     { mnuRemoveAccount Menu
       Text = ("Excluir Conta")
@@ -43,6 +39,5 @@
   }
   { lstAccounts ColumnView
     MoveScaled(1,1,33,44)
-    PopupMenu = "MenuContexto"
   }
 }
