@@ -1,3 +1,6 @@
+* Thu Oct 29 2026 Murilo Gomes <profmugomes@gmail.com> 2.0.6
+- Corrigido o recurso de gerar código após adicionar um registro que não foi selecionado para a geração do código.
+
 * Thu Oct 29 2026 Murilo Gomes <profmugomes@gmail.com> 2.0.5
 - Corrigido problema de geração de chave secreta.
 

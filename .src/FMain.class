@@ -104,7 +104,7 @@ End
 Public Sub Timer1_Timer()
   sTimer = 31
   
-  If lstAccounts.Count > 0 Then getCode(lstAccounts[lstAccounts.Key][0])
+  If lstAccounts.Count > 0 And lstAccounts.Selected Then getCode(lstAccounts[lstAccounts.Key][0])
 End
 
 Public Sub Timer2_Timer()
@@ -122,7 +122,6 @@ Private Sub getCode(id As Integer)
   Endif
   
 End
-
 
 Public Sub lstAccounts_Click()
   getCode(lstAccounts[lstAccounts.Key][0])
