@@ -1,3 +1,7 @@
+* Wed Nov 11 2026 Murilo Gomes <profmugomes@gmail.com> 2.0.7
+- Ajustado para funcionar com as dependencias do Gambas 3.20, compatível com a versão disponível no repositório do Lubuntu 26.04.
+- Adicionado dependencia requerida (gambas3-gb-gtk3-x11) no pacote deb
+
 * Thu Oct 29 2026 Murilo Gomes <profmugomes@gmail.com> 2.0.6
 - Corrigido o recurso de gerar código após adicionar um registro que não foi selecionado para a geração do código.
 

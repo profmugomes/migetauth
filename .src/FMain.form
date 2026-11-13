@@ -6,7 +6,7 @@
   Text = ("MiGetAuth")
   Icon = Picture["migetauth.png"]
   { Menu1 Menu
-    Text = ("Ferramentas")
+    Text = ("Contas")
     { mnuAddAccount Menu
       Text = ("Adicionar Conta")
     }
@@ -17,6 +17,20 @@
     }
     { mnuRemoveAccount Menu
       Text = ("Excluir Conta")
+    }
+  }
+  { Menu6 Menu
+    Text = ("Ferramentas")
+    { mnuImportarDados Menu
+      Text = ("Importar Dados")
+    }
+    { mnuExportarDados Menu
+      Text = ("Exportar Dados")
+    }
+    { Menu9 Menu
+    }
+    { mnuSincronizarRede Menu
+      Text = ("Sincronizar via Rede")
     }
   }
   { Menu2 Menu
