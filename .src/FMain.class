@@ -115,9 +115,9 @@ End
 Private Sub getCode(id As Integer)
   
   Dim sSecret As String = decrypt(getAccountCode(id))
-  Dim sCode As String = modOTP.TOTP(sSecret)
+  Dim sCode As String = modOTP.Generate(sSecret)
     
-  If modOTP.VerifyTOTP(sSecret, sCode) Then 
+  If modOTP.Verify(sSecret, sCode) Then 
     lcdCodigo.Text = sCode
   Endif
   

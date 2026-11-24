@@ -1,95 +1,415 @@
 ' Gambas module file
 
-' Copyright (C) 2026 Murilo Gomes <profmugomes.com.br>
-' SPDX-License-Identifier: GPL-2.0-only
+' Implementacao TOTP - RFC 6238
+' HMAC-SHA1 / HOTP - RFC 4226
+' Sem dependencias criptograficas externas.
 
-' Site: https://www.profmugomes.com.br
+Private Const BASE32 As String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+Private Const MASK32 As Long = &HFFFFFFFF
+Private Const SHA1_BLOCK_SIZE As Integer = 64
 
-' Gera um segredo Base32 aleatório
-' Public Function GenerateSecret() As String
-'  Dim sOutput As String
+' ---------------------------------------------------------
+' API PUBLICA
+' ---------------------------------------------------------
 
-'  Shell "openssl rand -base64 20 | tr -dc 'A-Z2-7' | head -c 32" To sOutput
+Public Function Generate(sSecret As String, Optional iDigits As Integer = 6, Optional iPeriod As Integer = 30) As String
 
-'  Return Trim(sOutput)
-' End
+  Dim lTimestamp As Long
 
-' Gera o código TOTP atual
-Public Function TOTP(sSecret As String, Optional iDigits As Integer = 6, Optional iPeriod As Integer = 30) As String
-  Dim sOutput As String
-  Dim sCommand As String
-  
-  If Not IsValidSecret(sSecret) Then Message.Error("Segredo Base32 inválido")
-  If iDigits < 6 Or iDigits > 8 Then Message.Error("Quantidade de dígitos inválida")
-  If iPeriod < 1 Then Message.Error("Período inválido")
-  If Not sSecret Then Message.Error("Segredo vazio")
+  If iDigits < 6 Or iDigits > 8 Then Error.Raise("Quantidade de digitos invalida")
+  If iPeriod < 1 Then Error.Raise("Periodo invalido")
+  If Not sSecret Then Error.Raise("Secret nao informado")
 
-  sCommand = "oathtool --totp --base32 --digits=" & Str(iDigits) & " --time-step-size=" & Str(iPeriod) & "s '" & sSecret & "'"
+  ' Timestamp Unix em UTC.
+  lTimestamp = UnixTime()
 
-  Shell sCommand To sOutput
+  Return GenerateAt(sSecret, lTimestamp, iDigits, iPeriod)
 
-  Return Trim(sOutput)
 End
 
-Public Function VerifyTOTP(sSecret As String, sCode As String, Optional iWindow As Integer = 1, Optional iDigits As Integer = 6, Optional iPeriod As Integer = 30) As Boolean
+Public Function GenerateAt(sSecret As String, lTimestamp As Long, Optional iDigits As Integer = 6, Optional iPeriod As Integer = 30) As String
+
+  Dim aKey As Byte[]
+  Dim aCounter As New Byte[8]
+  Dim aHash As Byte[]
+  Dim lCounter As Long
+  Dim lOffset As Integer
+  Dim lBinary As Long
+  Dim lCode As Long
+  Dim lModulus As Long
   Dim i As Integer
-  Dim sOutput As String
-  Dim sCommand As String
-  Dim iBaseTimestamp As Long
-  Dim iTimestamp As Long
-  
-  If Not IsDigit(sCode) Then Return False
+
+  If iDigits < 6 Or iDigits > 8 Then Error.Raise("Quantidade de digitos invalida")
+  If iPeriod < 1 Then Error.Raise("Periodo invalido")
+  If lTimestamp < 0 Then Error.Raise("Timestamp invalido")
+
+  aKey = Base32Decode(sSecret)
+
+  ' Calcula o contador de tempo.
+  lCounter = Int(lTimestamp / iPeriod)
+
+  ' Converte o contador para 8 bytes Big Endian.
+  For i = 7 To 0 Step -1
+    aCounter[i] = lCounter Mod 256
+    lCounter = Int(lCounter / 256)
+  Next
+
+  ' HMAC-SHA1.
+  aHash = HmacSha1(aKey, aCounter)
+
+  ' Dynamic Truncation.
+  lOffset = aHash[19] And &HF
+
+  lBinary = ((aHash[lOffset] And &H7F) * 16777216) Or (aHash[lOffset + 1] * 65536) Or (aHash[lOffset + 2] * 256) Or aHash[lOffset + 3]
+
+  lModulus = 1
+
+  For i = 1 To iDigits
+    lModulus *= 10
+  Next
+
+  lCode = lBinary Mod lModulus
+
+  Return Right$(String(iDigits, "0") & CStr(lCode), iDigits)
+
+End
+
+Public Function Verify(sSecret As String, sCode As String, Optional iDigits As Integer = 6, Optional iPeriod As Integer = 30, Optional iWindow As Integer = 1) As Boolean
+
+  Dim lTimestamp As Long
+  Dim lCounter As Long
+  Dim i As Integer
+  Dim sExpected As String
+  Dim iDiff As Integer
+  Dim iResult As Integer
+
+  If iDigits < 6 Or iDigits > 8 Then Return False
+  If iPeriod < 1 Or iWindow < 0 Then Return False
   If Len(sCode) <> iDigits Then Return False
-  If iWindow < 0 Or iWindow > 10 Then Return False
-  If Not sSecret Then Return False
+  If Not IsIntegerCode(sCode) Then Return False
 
-  iBaseTimestamp = DateDiff(CDate("1/1/1970"), Now(), gb.Second)
+  lTimestamp = UnixTime()
+  lCounter = Int(lTimestamp / iPeriod)
 
+  ' Verifica o periodo atual e os anteriores/posteriores.
   For i = -iWindow To iWindow
-    iTimestamp = iBaseTimestamp + (i * iPeriod)
-    
-    ' Adicionado o '@' antes do timestamp, que indica formato Unix Epoch para o oathtool
-    sCommand = "oathtool --totp --base32 --digits=" & Str(iDigits) & " --time-step-size=" & Str(iPeriod) & "s --now=@" & Str(iTimestamp) & " '" & sSecret & "' 2>&1"
 
-    Shell sCommand To sOutput
-    sOutput = Trim(sOutput)
-    
-    If sOutput = sCode Then Return True
+    If lCounter + i >= 0 Then
+
+      sExpected = GenerateAt(sSecret, (lCounter + i) * iPeriod, iDigits, iPeriod)
+
+      ' Comparacao sem interrupcao no primeiro caractere diferente.
+      iDiff = 0
+
+      For iResult = 1 To iDigits
+        iDiff = iDiff Or (Asc(Mid$(sCode, iResult, 1)) Xor Asc(Mid$(sExpected, iResult, 1)))
+      Next
+
+      If iDiff = 0 Then Return True
+
+    Endif
+
   Next
 
   Return False
+
 End
 
-Private Function IsValidSecret(sSecret As String) As Boolean
-  Dim i As Integer
-  Dim sChar As String
+Public Function UnixTime() As Long
+
+  Dim dEpoch As Date
+
+  dEpoch = Date(1970, 1, 1, 0, 0, 0)
+
+  Return DateDiff(dEpoch, Now, gb.Second)
+
+End
+
+' ---------------------------------------------------------
+' BASE32
+' ---------------------------------------------------------
+
+Private Function Base32Decode(sSecret As String) As Byte[]
+
   Dim sClean As String
-  
-  If Not sSecret Then 
-    Print "Erro IsValidSecret: Segredo vazio ou nulo."
-    Return False
-  End If
-  
-  ' Remove espaços e hífens internos/externos comuns em chaves formatadas
-  sClean = Replace(sSecret, " ", "")
+  Dim aResult As Byte[]
+  Dim iBuffer As Long
+  Dim iBits As Integer
+  Dim iValue As Integer
+  Dim iOutput As Integer
+  Dim i As Integer
+  Dim iLength As Integer
+
+  sClean = UCase$(Trim$(sSecret))
+  sClean = Replace(sClean, "=", "")
+  sClean = Replace(sClean, " ", "")
   sClean = Replace(sClean, "-", "")
-  sClean = Trim(sClean)
-  
-  ' Verificação de tamanho (alguns usam 16, mas se o seu for menor, ajuste aqui)
-  If Len(sClean) < 8 Then 
-    Print "Erro IsValidSecret: Tamanho muito curto -> " & Len(sClean)
-    Return False
-  End If
+
+  iLength = (Len(sClean) * 5) \ 8
+  aResult = New Byte[iLength]
+
+  iBuffer = 0
+  iBits = 0
+  iOutput = 0
 
   For i = 1 To Len(sClean)
-    sChar = UCase(Mid(sClean, i, 1))
-    
-    ' Valida caracteres permitidos em Base32 + Padding (=)
-    If InStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=", sChar) = 0 Then 
-      Print "Erro IsValidSecret: Caractere inválido encontrado: [" & sChar & "]"
-      Return False
-    End If
+
+    iValue = InStr(BASE32, Mid$(sClean, i, 1)) - 1
+
+    If iValue < 0 Then Error.Raise("Caractere Base32 invalido")
+
+    iBuffer = ((iBuffer * 32) Or iValue) And &HFFFF
+    iBits += 5
+
+    If iBits >= 8 Then
+
+      iBits -= 8
+
+      aResult[iOutput] = (iBuffer Shr iBits) And &HFF
+      iOutput += 1
+
+      iBuffer = iBuffer And ((1 Shl iBits) - 1)
+
+    Endif
+
+  Next
+
+  Return aResult
+
+End
+
+' ---------------------------------------------------------
+' HMAC-SHA1
+' ---------------------------------------------------------
+
+Private Function HmacSha1(aKey As Byte[], aData As Byte[]) As Byte[]
+
+  Dim aKeyBlock As New Byte[64]
+  Dim aInner As Byte[]
+  Dim aOuter As Byte[]
+  Dim aInnerHash As Byte[]
+  Dim aResult As Byte[]
+  Dim aKeyHash As Byte[]
+  Dim i As Integer
+  Dim iKeyLength As Integer
+  Dim iDataLength As Integer
+
+  iKeyLength = aKey.Count
+
+  ' Se a chave for maior que 64 bytes, calcula SHA1.
+  If iKeyLength > SHA1_BLOCK_SIZE
+    aKeyHash = SHA1(aKey)
+    aKey = aKeyHash
+    iKeyLength = aKey.Count
+  Endif
+
+  ' Preenche o bloco da chave.
+  For i = 0 To iKeyLength - 1
+    aKeyBlock[i] = aKey[i]
+  Next
+
+  iDataLength = aData.Count
+
+  aInner = New Byte[64 + iDataLength]
+  aOuter = New Byte[84]
+
+  ' Inner pad: chave XOR 0x36.
+  For i = 0 To 63
+    aInner[i] = aKeyBlock[i] Xor &H36
+  Next
+
+  For i = 0 To iDataLength - 1
+    aInner[64 + i] = aData[i]
+  Next
+
+  aInnerHash = SHA1(aInner)
+
+  ' Outer pad: chave XOR 0x5C.
+  For i = 0 To 63
+    aOuter[i] = aKeyBlock[i] Xor &H5C
+  Next
+
+  For i = 0 To 19
+    aOuter[64 + i] = aInnerHash[i]
+  Next
+
+  aResult = SHA1(aOuter)
+
+  Return aResult
+
+End
+
+' ---------------------------------------------------------
+' SHA1
+' ---------------------------------------------------------
+
+Private Function SHA1(aData As Byte[]) As Byte[]
+
+  Dim aMessage As Byte[]
+  Dim aW As New Long[80]
+  Dim aResult As New Byte[20]
+
+  Dim lH0 As Long = &H67452301
+  Dim lH1 As Long = &HEFCDAB89
+  Dim lH2 As Long = &H98BADCFE
+  Dim lH3 As Long = &H10325476
+  Dim lH4 As Long = &HC3D2E1F0
+
+  Dim lA As Long
+  Dim lB As Long
+  Dim lC As Long
+  Dim lD As Long
+  Dim lE As Long
+  Dim lF As Long
+  Dim lK As Long
+  Dim lTemp As Long
+
+  Dim lLength As Long
+  Dim lPadded As Long
+  Dim lBits As Long
+  Dim lOffset As Long
+
+  Dim i As Integer
+  Dim j As Integer
+  Dim t As Integer
+
+  lLength = aData.Count
+
+  ' Padding SHA1.
+  lPadded = ((lLength + 9 + 63) \ 64) * 64
+  aMessage = New Byte[lPadded]
+
+  For i = 0 To lLength - 1
+    aMessage[i] = aData[i]
+  Next
+
+  aMessage[lLength] = &H80
+  lBits = lLength * 8
+
+  For i = 0 To 7
+    aMessage[lPadded - 1 - i] = lBits Mod 256
+    lBits = Int(lBits / 256)
+  Next
+
+  ' Processa blocos de 512 bits.
+  For lOffset = 0 To lPadded - 1 Step 64
+
+    ' Primeiras 16 palavras.
+    For i = 0 To 15
+
+      j = lOffset + (i * 4)
+
+      aW[i] = aMessage[j]
+      aW[i] = (aW[i] * 256) + aMessage[j + 1]
+      aW[i] = (aW[i] * 256) + aMessage[j + 2]
+      aW[i] = (aW[i] * 256) + aMessage[j + 3]
+
+    Next
+
+    ' Expansao para 80 palavras.
+    For i = 16 To 79
+
+      lTemp = aW[i - 3] Xor aW[i - 8] Xor aW[i - 14] Xor aW[i - 16]
+
+      aW[i] = RotateLeft(lTemp, 1)
+
+    Next
+
+    lA = lH0
+    lB = lH1
+    lC = lH2
+    lD = lH3
+    lE = lH4
+
+    For t = 0 To 79
+
+      If t < 20 Then
+
+        lF = (lB And lC) Or ((Not lB) And lD)
+        lK = &H5A827999
+
+      Else If t < 40 Then
+
+        lF = lB Xor lC Xor lD
+        lK = &H6ED9EBA1
+
+      Else If t < 60 Then
+
+        lF = (lB And lC) Or (lB And lD) Or (lC And lD)
+        lK = &H8F1BBCDC
+
+      Else
+
+        lF = lB Xor lC Xor lD
+        lK = &HCA62C1D6
+
+      Endif
+
+      lTemp = RotateLeft(lA, 5)
+      lTemp = (lTemp + lF) Mod 4294967296
+      lTemp = (lTemp + lE) Mod 4294967296
+      lTemp = (lTemp + lK) Mod 4294967296
+      lTemp = (lTemp + aW[t]) Mod 4294967296
+
+      lE = lD
+      lD = lC
+      lC = RotateLeft(lB, 30)
+      lB = lA
+      lA = lTemp
+
+    Next
+
+    lH0 = (lH0 + lA) And MASK32
+    lH1 = (lH1 + lB) And MASK32
+    lH2 = (lH2 + lC) And MASK32
+    lH3 = (lH3 + lD) And MASK32
+    lH4 = (lH4 + lE) And MASK32
+
+  Next
+
+  ' Resultado SHA1 em Big Endian.
+  WriteLong(aResult, 0, lH0)
+  WriteLong(aResult, 4, lH1)
+  WriteLong(aResult, 8, lH2)
+  WriteLong(aResult, 12, lH3)
+  WriteLong(aResult, 16, lH4)
+
+  Return aResult
+
+End
+
+' ---------------------------------------------------------
+' FUNCOES AUXILIARES
+' ---------------------------------------------------------
+
+Private Function RotateLeft(lValue As Long, iBits As Integer) As Long
+
+  Return ((lValue Shl iBits) Or (lValue Shr (32 - iBits))) And MASK32
+
+End
+
+Private Sub WriteLong(aResult As Byte[], iOffset As Integer, lValue As Long)
+
+  aResult[iOffset] = (lValue Shr 24) And &HFF
+  aResult[iOffset + 1] = (lValue Shr 16) And &HFF
+  aResult[iOffset + 2] = (lValue Shr 8) And &HFF
+  aResult[iOffset + 3] = lValue And &HFF
+
+End
+
+Private Function IsIntegerCode(sCode As String) As Boolean
+
+  Dim i As Integer
+  Dim iChar As Integer
+
+  For i = 1 To Len(sCode)
+
+    iChar = Asc(Mid$(sCode, i, 1))
+
+    If iChar < 48 Or iChar > 57 Then Return False
+
   Next
 
   Return True
+
 End
